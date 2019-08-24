@@ -22,6 +22,8 @@ data=tf.keras.datasets.mnist
 (trainX,trainY),(testX,testY)=data.load_data()
 trainX=np.array([x.ravel() for x in trainX])
 testX=np.array([x.ravel() for x in testX])
+trainX=trainX/255.0
+testX=testX/255.0
 one_hot=OneHotEncoder(sparse=False)
 trainY=one_hot.fit_transform(trainY.reshape(len(trainY),1))
 testY=one_hot.fit_transform(testY.reshape(len(testY),1))
@@ -67,8 +69,8 @@ plot_images(images,true_class)
 
 x=tf.placeholder(tf.float32,[None,pixels])
 y=tf.placeholder(tf.float32,[None,num_of_classes])
-weight=tf.Variable(tf.random.normal([pixels,num_of_classes]))
-bias=tf.Variable(tf.zeros([1,num_of_classes]))
+weight=tf.Variable(tf.truncated_normal([pixels,num_of_classes], stddev=0.1))
+bias=tf.Variable(tf.truncated_normal([1,num_of_classes],stddev=0.1))
 
 """## Define Model"""
 
@@ -78,7 +80,7 @@ prediction=tf.nn.softmax(y_pred)
 """## Define Loss Function and accuracy"""
 
 cross_entropy = tf.nn.softmax_cross_entropy_with_logits_v2(labels=y,logits=y_pred)
-loss = tf.reduce_sum(cross_entropy)
+loss = tf.reduce_mean(cross_entropy)
 accurate = tf.equal(tf.argmax(prediction,axis=1), tf.argmax(y,axis=1))
 accuracy = tf.reduce_mean(tf.cast(accurate, tf.float32))
 
@@ -123,8 +125,10 @@ def train(iterations):
         y_batch=trainY[rnd_index]
         train_dict={x:x_batch,y:y_batch}
         session.run(optimizer,feed_dict=train_dict)
-        c=session.run(loss,feed_dict=train_dict)/batch_size
-        cost.append(c)
+        if i % batch_size == 0:
+            minibatch_loss, minibatch_accuracy = session.run([loss, accuracy],feed_dict={x: x_batch, y: y_batch})
+            print("Iteration",str(i),"\t| Loss =",str(minibatch_loss),"\t| Accuracy =",str(minibatch_accuracy))
+            cost.append(minibatch_loss)
     return np.array(cost)
 
 print_accuracy()
